@@ -1,11 +1,13 @@
 """
 factor.py
 """
+from abc import ABCMeta
 from functools import wraps
 from operator import attrgetter
 from numbers import Number
 
 from numpy import inf, where
+from six import with_metaclass
 
 from zipline.errors import UnknownRankMethod
 from zipline.lib.normalize import naive_grouped_rowwise_apply
@@ -316,8 +318,11 @@ float64_only = restrict_to_dtype(
     )
 )
 
-
 FACTOR_DTYPES = frozenset([datetime64ns_dtype, float64_dtype, int64_dtype])
+
+
+class FactorProxy(with_metaclass(ABCMeta, object)):
+    pass
 
 
 class Factor(RestrictedDTypeMixin, ComputableTerm):
@@ -626,7 +631,9 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
         return Rank(self, method=method, ascending=ascending, mask=mask)
 
     @expect_types(
-        target=Slice, correlation_length=int, mask=(Filter, NotSpecifiedType),
+        target=(FactorProxy, Slice),
+        correlation_length=int,
+        mask=(Filter, NotSpecifiedType),
     )
     def pearsonr(self, target, correlation_length, mask=NotSpecified):
         """
@@ -682,14 +689,16 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
         """
         from .statistical import RollingPearson
         return RollingPearson(
-            target_factor=self,
-            target_slice=target,
+            base_factor=self,
+            target=target,
             correlation_length=correlation_length,
             mask=mask,
         )
 
     @expect_types(
-        target=Slice, correlation_length=int, mask=(Filter, NotSpecifiedType),
+        target=(FactorProxy, Slice),
+        correlation_length=int,
+        mask=(Filter, NotSpecifiedType),
     )
     def spearmanr(self, target, correlation_length, mask=NotSpecified):
         """
@@ -745,14 +754,16 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
         """
         from .statistical import RollingSpearman
         return RollingSpearman(
-            target_factor=self,
-            target_slice=target,
+            base_factor=self,
+            target=target,
             correlation_length=correlation_length,
             mask=mask,
         )
 
     @expect_types(
-        target=Slice, regression_length=int, mask=(Filter, NotSpecifiedType),
+        target=(FactorProxy, Slice),
+        regression_length=int,
+        mask=(Filter, NotSpecifiedType),
     )
     def linear_regression(self, target, regression_length, mask=NotSpecified):
         """
@@ -806,8 +817,8 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
         """
         from .statistical import RollingLinearRegression
         return RollingLinearRegression(
-            target_factor=self,
-            target_slice=target,
+            dependent=self,
+            independent=target,
             regression_length=regression_length,
             mask=mask,
         )
@@ -1043,6 +1054,8 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
         NaN, inf, or -inf.
         """
         return (-inf < self) & (self < inf)
+
+FactorProxy.register(Factor)
 
 
 class NumExprFactor(NumericalExpression, Factor):
