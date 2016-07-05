@@ -41,6 +41,7 @@ from zipline.pipeline.mixins import (
 from zipline.pipeline.sentinels import NotSpecified, NotSpecifiedType
 from zipline.pipeline.term import (
     ComputableTerm,
+    LoadableTerm,
     Slice,
     Term,
 )
@@ -631,7 +632,7 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
         return Rank(self, method=method, ascending=ascending, mask=mask)
 
     @expect_types(
-        target=(FactorProxy, Slice),
+        target=(FactorProxy, LoadableTerm, Slice),
         correlation_length=int,
         mask=(Filter, NotSpecifiedType),
     )
@@ -696,7 +697,7 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
         )
 
     @expect_types(
-        target=(FactorProxy, Slice),
+        target=(FactorProxy, LoadableTerm, Slice),
         correlation_length=int,
         mask=(Filter, NotSpecifiedType),
     )
@@ -761,7 +762,7 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
         )
 
     @expect_types(
-        target=(FactorProxy, Slice),
+        target=(FactorProxy, LoadableTerm, Slice),
         regression_length=int,
         mask=(Filter, NotSpecifiedType),
     )
