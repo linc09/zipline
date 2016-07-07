@@ -39,12 +39,7 @@ from zipline.pipeline.mixins import (
     SingleInputMixin,
 )
 from zipline.pipeline.sentinels import NotSpecified, NotSpecifiedType
-from zipline.pipeline.term import (
-    ComputableTerm,
-    LoadableTerm,
-    Slice,
-    Term,
-)
+from zipline.pipeline.term import ComputableTerm, Term
 from zipline.utils.functional import with_doc, with_name
 from zipline.utils.input_validation import expect_types
 from zipline.utils.math_utils import nanmean, nanstd
@@ -631,11 +626,7 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
         """
         return Rank(self, method=method, ascending=ascending, mask=mask)
 
-    @expect_types(
-        target=(FactorProxy, LoadableTerm, Slice),
-        correlation_length=int,
-        mask=(Filter, NotSpecifiedType),
-    )
+    @expect_types(correlation_length=int, mask=(Filter, NotSpecifiedType))
     def pearsonr(self, target, correlation_length, mask=NotSpecified):
         """
         Construct a new Factor that computes rolling pearson correlation
@@ -647,9 +638,11 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
 
         Parameters
         ----------
-        target : zipline.pipeline.slice.Slice
-            The column of data with which to compute correlations against each
-            column of data produced by `self`.
+        target : zipline.pipeline.Term with a numeric dtype
+            The term with which to compute correlations against each column of
+            data produced by `self`.  This may be a Factor, a BoundColumn or a
+            Slice. If `target` is two-dimensional, correlations are computed
+            asset-wise.
         correlation_length : int
             Length of the lookback window over which to compute each
             correlation coefficient.
@@ -696,11 +689,7 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
             mask=mask,
         )
 
-    @expect_types(
-        target=(FactorProxy, LoadableTerm, Slice),
-        correlation_length=int,
-        mask=(Filter, NotSpecifiedType),
-    )
+    @expect_types(correlation_length=int, mask=(Filter, NotSpecifiedType))
     def spearmanr(self, target, correlation_length, mask=NotSpecified):
         """
         Construct a new Factor that computes rolling spearman rank correlation
@@ -712,9 +701,11 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
 
         Parameters
         ----------
-        target : zipline.pipeline.slice.Slice
-            The column of data with which to compute correlations against each
-            column of data produced by `self`.
+        target : zipline.pipeline.Term with a numeric dtype
+            The term with which to compute correlations against each column of
+            data produced by `self`.  This may be a Factor, a BoundColumn or a
+            Slice. If `target` is two-dimensional, correlations are computed
+            asset-wise.
         correlation_length : int
             Length of the lookback window over which to compute each
             correlation coefficient.
@@ -761,11 +752,7 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
             mask=mask,
         )
 
-    @expect_types(
-        target=(FactorProxy, LoadableTerm, Slice),
-        regression_length=int,
-        mask=(Filter, NotSpecifiedType),
-    )
+    @expect_types(regression_length=int, mask=(Filter, NotSpecifiedType))
     def linear_regression(self, target, regression_length, mask=NotSpecified):
         """
         Construct a new Factor that performs an ordinary least-squares
@@ -777,6 +764,10 @@ class Factor(RestrictedDTypeMixin, ComputableTerm):
 
         Parameters
         ----------
+        target : zipline.pipeline.Term with a numeric dtype
+            The term to use as the predictor/independent variable in each
+            regression.  This may be a Factor, a BoundColumn or a Slice. If
+            `target` is two-dimensional, correlations are computed asset-wise.
         target : zipline.pipeline.slice.Slice
             The column of data to use as the predictor/independent variable in
             each regression.

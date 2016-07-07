@@ -41,18 +41,19 @@ class _RollingCorrelation(CustomFactor, SingleInputMixin):
 class RollingPearson(_RollingCorrelation):
     """
     A Factor that computes pearson correlation coefficients between the columns
-    of a given Factor and either the columns of another Factor or a single
-    column (slice) of data.
+    of a given Factor and either the columns of another Factor/BoundColumn or a
+    slice/single column of data.
 
     Parameters
     ----------
     base_factor : zipline.pipeline.factors.Factor
         The factor for which to compute correlations of each of its columns
         with `target`.
-    target : zipline.pipeline.slice.Slice or zipline.pipeline.Factor
-        The data with which to compute correlations against each column of data
-        produced by `base_factor`. If `target` is a Factor, correlations are
-        computed asset-wise.
+    target : zipline.pipeline.Term with a numeric dtype
+        The term with which to compute correlations against each column of data
+        produced by `base_factor`. This term may be a Factor, a BoundColumn or
+        a Slice. If `target` is two-dimensional, correlations are computed
+        asset-wise.
     correlation_length : int
         Length of the lookback window over which to compute each correlation
         coefficient.
@@ -86,18 +87,19 @@ class RollingPearson(_RollingCorrelation):
 class RollingSpearman(_RollingCorrelation):
     """
     A Factor that computes spearman rank correlation coefficients between the
-    columns of a given Factor and either the columns of another Factor or a
-    single column (slice) of data.
+    columns of a given Factor and either the columns of another
+    Factor/BoundColumn or a slice/single column of data.
 
     Parameters
     ----------
     base_factor : zipline.pipeline.factors.Factor
         The factor for which to compute correlations of each of its columns
         with `target`.
-    target : zipline.pipeline.slice.Slice or zipline.pipeline.Factor
-        The data with which to compute correlations against each column of data
-        produced by `base_factor`. If `target` is a Factor, correlations are
-        computed asset-wise.
+    target : zipline.pipeline.Term with a numeric dtype
+        The term with which to compute correlations against each column of data
+        produced by `base_factor`. This term may be a Factor, a BoundColumn or
+        a Slice. If `target` is two-dimensional, correlations are computed
+        asset-wise.
     correlation_length : int
         Length of the lookback window over which to compute each correlation
         coefficient.
@@ -131,8 +133,8 @@ class RollingSpearman(_RollingCorrelation):
 class RollingLinearRegression(CustomFactor, SingleInputMixin):
     """
     A Factor that performs an ordinary least-squares regression predicting the
-    columns of a given Factor from either the columns of another Factor or a
-    single column (slice) of data.
+    columns of a given Factor from either the columns of another
+    Factor/BoundColumn or a slice/single column of data.
 
     Parameters
     ----------
@@ -143,6 +145,11 @@ class RollingLinearRegression(CustomFactor, SingleInputMixin):
         The factor/slice whose columns are the predictor/independent variable
         of each regression with `dependent`. If `independent` is a Factor,
         regressions are computed asset-wise.
+    independent : zipline.pipeline.Term with a numeric dtype
+        The term to use as the predictor/independent variable in each
+        regression with `dependent`. This term may be a Factor, a BoundColumn
+        or a Slice. If `independent` is two-dimensional, regressions are
+        computed asset-wise.
     regression_length : int
         Length of the lookback window over which to compute each regression.
     mask : zipline.pipeline.Filter, optional
