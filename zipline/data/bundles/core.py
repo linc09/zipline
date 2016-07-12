@@ -30,10 +30,11 @@ from zipline.utils.input_validation import ensure_timestamp, optionally
 import zipline.utils.paths as pth
 from zipline.utils.preprocess import preprocess
 from zipline.utils.calendars import get_calendar
+from zipline.utils.tradingcalendar import trading_days, open_and_closes
 
-nyse_cal = get_calendar('NYSE')
-trading_days = nyse_cal.all_trading_days
-open_and_closes = nyse_cal.schedule
+# nyse_cal = get_calendar('NYSE')
+# trading_days = nyse_cal.all_trading_days
+# open_and_closes = nyse_cal.schedule
 
 
 def asset_db_path(bundle_name, timestr, environ=None):
@@ -349,15 +350,24 @@ def _make_bundle_core():
                     bundle.closes,
                     minutes_per_day=bundle.minutes_per_day,
                 )
+                #asset_db_writer = AssetDBWriter(
+                #    stack.enter_context(working_file(
+                #        asset_db_path(name, timestr, environ=environ),
+                #    )).path,
+                #)
+                #adjustment_db_writer = SQLiteAdjustmentWriter(
+                #    stack.enter_context(working_file(
+                #        adjustment_db_path(name, timestr, environ=environ),
+                #    )).path,
+                #    BcolzDailyBarReader(daily_bars_path),
+                #    bundle.calendar,
+                #    overwrite=True,
+                #)
                 asset_db_writer = AssetDBWriter(
-                    stack.enter_context(working_file(
-                        asset_db_path(name, timestr, environ=environ),
-                    )).path,
+                    str(asset_db_path(name, timestr, environ=environ)),
                 )
                 adjustment_db_writer = SQLiteAdjustmentWriter(
-                    stack.enter_context(working_file(
-                        adjustment_db_path(name, timestr, environ=environ),
-                    )).path,
+                    str(adjustment_db_path(name, timestr, environ=environ)),
                     BcolzDailyBarReader(daily_bars_path),
                     bundle.calendar,
                     overwrite=True,
