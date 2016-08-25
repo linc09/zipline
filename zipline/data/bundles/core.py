@@ -29,7 +29,7 @@ from zipline.utils.compat import mappingproxy
 from zipline.utils.input_validation import ensure_timestamp, optionally
 import zipline.utils.paths as pth
 from zipline.utils.preprocess import preprocess
-from zipline.utils.calendars import get_calendar
+# from zipline.utils.calendars import get_calendar
 from zipline.utils.tradingcalendar import trading_days, open_and_closes
 
 # nyse_cal = get_calendar('NYSE')
@@ -112,8 +112,7 @@ _BundlePayload = namedtuple(
 
 BundleData = namedtuple(
     'BundleData',
-    'asset_finder equity_minute_bar_reader equity_daily_bar_reader '
-    'adjustment_reader',
+    'asset_finder minute_bar_reader daily_bar_reader adjustment_reader',
 )
 
 BundleCore = namedtuple(
@@ -454,10 +453,10 @@ def _make_bundle_core():
             asset_finder=AssetFinder(
                 asset_db_path(name, timestr, environ=environ),
             ),
-            equity_minute_bar_reader=BcolzMinuteBarReader(
+            minute_bar_reader=BcolzMinuteBarReader(
                 minute_equity_path(name, timestr,  environ=environ),
             ),
-            equity_daily_bar_reader=BcolzDailyBarReader(
+            daily_bar_reader=BcolzDailyBarReader(
                 daily_equity_path(name, timestr, environ=environ),
             ),
             adjustment_reader=SQLiteAdjustmentReader(

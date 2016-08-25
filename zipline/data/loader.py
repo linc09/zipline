@@ -29,7 +29,11 @@ from ..utils.paths import (
     data_root,
 )
 from ..utils.deprecate import deprecated
-from zipline.utils.calendars import get_calendar
+#from zipline.utils.calendars import get_calendar
+from ..utils.tradingcalendar import (
+    trading_day as trading_day_nyse,
+    trading_days as trading_days_nyse,
+)
 
 logger = logbook.Logger('Loader')
 
@@ -45,9 +49,9 @@ INDEX_MAPPING = {
 
 ONE_HOUR = pd.Timedelta(hours=1)
 
-nyse_cal = get_calendar('NYSE')
-trading_day_nyse = nyse_cal.day
-trading_days_nyse = nyse_cal.all_trading_days
+#nyse_cal = get_calendar('NYSE')
+#trading_day_nyse = nyse_cal.day
+#trading_days_nyse = nyse_cal.all_trading_days
 
 
 def last_modified_time(path):
@@ -95,10 +99,11 @@ def has_data_for_dates(series_or_df, first_date, last_date):
     return (first <= first_date) and (last >= last_date)
 
 
-def load_market_data(trading_day=trading_day_nyse,
+def load_market_data_backupbyln(trading_day=trading_day_nyse,
                      trading_days=trading_days_nyse,
                      bm_symbol='^GSPC'):
     """
+    * because will use chinese stock market, so rename the original function name.
     Load benchmark returns and treasury yield curves for the given calendar and
     benchmark symbol.
 
@@ -164,6 +169,7 @@ def load_market_data(trading_day=trading_day_nyse,
         # date so that we can compute returns for the first date.
         trading_day,
     )
+
     tc = ensure_treasury_data(
         bm_symbol,
         first_date,
@@ -173,6 +179,118 @@ def load_market_data(trading_day=trading_day_nyse,
     benchmark_returns = br[br.index.slice_indexer(first_date, last_date)]
     treasury_curves = tc[tc.index.slice_indexer(first_date, last_date)]
     return benchmark_returns, treasury_curves
+
+
+def load_market_data(trading_day,
+                    trading_days,
+                    bm_symbol):
+    """
+    * because will use chinese stock market, so rename the original function name.
+    Load benchmark returns and treasury yield curves for the given calendar and
+    benchmark symbol.
+
+    Benchmarks are downloaded as a Series from Yahoo Finance.  Treasury curves
+    are US Treasury Bond rates and are downloaded from 'www.federalreserve.gov'
+    by default.  For Canadian exchanges, a loader for Canadian bonds from the
+    Bank of Canada is also available.
+
+    Results downloaded from the internet are cached in
+    ~/.zipline/data. Subsequent loads will attempt to read from the cached
+    files before falling back to redownload.
+
+    Parameters
+    ----------
+    trading_day : pandas.CustomBusinessDay, optional
+        A trading_day used to determine the latest day for which we
+        expect to have data.  Defaults to an NYSE trading day.
+    trading_days : pd.DatetimeIndex, optional
+        A calendar of trading days.  Also used for determining what cached
+        dates we should expect to have cached. Defaults to the NYSE calendar.
+    bm_symbol : str, optional
+        Symbol for the benchmark index to load.  Defaults to '^GSPC', the Yahoo
+        ticker for the S&P 500.
+
+    Returns
+    -------
+    (benchmark_returns, treasury_curves) : (pd.Series, pd.DataFrame)
+
+    Notes
+    -----
+
+    Both return values are DatetimeIndexed with values dated to midnight in UTC
+    of each stored date.  The columns of `treasury_curves` are:
+
+    '1month', '3month', '6month',
+    '1year','2year','3year','5year','7year','10year','20year','30year'
+    """
+    first_date = trading_days[0]
+    now = pd.Timestamp.utcnow()
+
+    # We expect to have benchmark and treasury data that's current up until
+    # **two** full trading days prior to the most recently completed trading
+    # day.
+    # Example:
+    # On Thu Oct 22 2015, the previous completed trading day is Wed Oct 21.
+    # However, data for Oct 21 doesn't become available until the early morning
+    # hours of Oct 22.  This means that there are times on the 22nd at which we
+    # cannot reasonably expect to have data for the 21st available.  To be
+    # conservative, we instead expect that at any time on the 22nd, we can
+    # download data for Tuesday the 20th, which is two full trading days prior
+    # to the date on which we're running a test.
+
+    # We'll attempt to download new data if the latest entry in our cache is
+    # before this date.
+    last_date = trading_days[trading_days.get_loc(now, method='ffill') - 2]
+
+    br = __sh_index_br_ln()
+    tc = ensure_treasury_data(
+        bm_symbol,
+        first_date,
+        last_date,
+        now,
+    )
+    benchmark_returns = br[br.index.slice_indexer(first_date, last_date)]
+    treasury_curves = tc[tc.index.slice_indexer(first_date, last_date)]
+    return benchmark_returns, treasury_curves
+
+
+def __sh_index_br_ln():
+    """
+    load sh.000001 close price
+    """
+    import datetime
+    import MySQLdb
+    import numpy
+
+    conn_gangao = MySQLdb.connect(host='yf-cbg-fb-gushitong14.yf01.baidu.com',
+                                  user='ln',
+                                  port=8081,
+                                  passwd='lnpw', db='stock_ana',
+                                  charset='utf8')
+
+    cursor_gangao = conn_gangao.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+
+    query_sql = '''
+        select taba.* from
+        (select * from jingong_work.sh_kline_day_complexbeforeright where symbol='000001') taba
+        join
+        (select distinct date_format(TradingDay,'%Y%m%d') TradingDay from gangao.PUB_TRADINGDAY where exchangecode=101) tabb
+        on taba.date=tabb.TradingDay
+        order by date
+    '''
+    cursor_gangao.execute(query_sql)
+    index = list()
+    org_data = list()
+    for row in cursor_gangao.fetchall():
+        index.append(
+            datetime.datetime.strptime(str(row['date']), '%Y%m%d')
+        )
+        org_data.append(
+            numpy.float64(row['close']))
+    conn_gangao.close()
+
+    br = pd.Series(data=org_data, index=index).tz_localize('UTC')
+    return br
 
 
 def ensure_benchmark_data(symbol, first_date, last_date, now, trading_day):

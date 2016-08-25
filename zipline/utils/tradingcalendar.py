@@ -14,6 +14,7 @@
 # limitations under the License.
 import pandas as pd
 import pytz
+import MySQLdb
 # import warnings
 
 from datetime import datetime
@@ -270,10 +271,33 @@ non_trading_days = get_non_trading_days(start, end)
 trading_day = pd.tseries.offsets.CDay(holidays=non_trading_days)
 
 
-def get_trading_days(start, end, trading_day=trading_day):
+def get_trading_days_ln(start, end, trading_day=trading_day):
     return pd.date_range(start=start.date(),
                          end=end.date(),
                          freq=trading_day).tz_localize('UTC')
+
+def get_trading_days(start, end):
+    # register China stocks
+    conn_gangao = MySQLdb.connect(host='yf-cbg-fb-gushitong14.yf01.baidu.com',
+                                  user='ln',
+                                  port=8081,
+                                  passwd='lnpw', db='gangao',
+                                  charset='utf8')
+    cursor_gangao = conn_gangao.cursor(cursorclass=MySQLdb.cursors.DictCursor)
+    query_sql = '''
+        select distinct TradingDay from PUB_TRADINGDAY where exchangecode=101
+        and TradingDay>=%s and TradingDay<=%s
+         order by TradingDay;
+    '''
+    cursor_gangao.execute(query_sql, (start.date(), end.date()))
+    traday_list = list()
+    for row in cursor_gangao.fetchall():
+        traday_list.append(row['TradingDay'])
+
+    cursor_gangao.close()
+    conn_gangao.close()
+
+    return pd.DatetimeIndex(data=traday_list, freq='C', tz=pytz.utc)
 
 trading_days = get_trading_days(start, end)
 
